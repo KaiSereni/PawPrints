@@ -11,13 +11,15 @@ from django.dispatch import receiver
 
 import bleach
 
-bleach.sanitizer.ALLOWED_TAGS.extend(
+allowed_tags = list(bleach.sanitizer.ALLOWED_TAGS)
+allowed_tags.extend(
     [u'i', u'h1', u'h2', u'h3', u'h4', u'h5', u'h6', u'p', u'sub', u'br', u'sup', u'span', u'img'])
-bleach.sanitizer.ALLOWED_ATTRIBUTES[u'img'] = [
-    u'alt', u'height', u'src', u'width']
-bleach.sanitizer.ALLOWED_STYLES.extend(u'text-align')
-for key in bleach.sanitizer.ALLOWED_ATTRIBUTES.keys():
-    bleach.sanitizer.ALLOWED_ATTRIBUTES[key].append(u'data-mce-style')
+
+allowed_attrs = bleach.sanitizer.ALLOWED_ATTRIBUTES
+allowed_attrs[u'img'] = [u'alt', u'height', u'src', u'width']
+
+for key in allowed_attrs.keys():
+    allowed_attrs[key].append(u'data-mce-style')
 
 
 #
@@ -37,7 +39,7 @@ class Petition(models.Model):
     has_response = models.BooleanField(default=False)
     response = models.ForeignKey(
         'petitions.Response', default=None, blank=True, null=True, on_delete=models.SET_NULL)
-    in_progress = models.NullBooleanField()
+    in_progress = models.BooleanField(null=True)
     updates = models.ManyToManyField('petitions.Update', default=None)
     old_id = models.CharField(max_length=20, default=None, blank=True, null=True)
     #committee = models.CharField(max_length=100, default=None)
@@ -93,5 +95,9 @@ class Report(models.Model):
 #
 @receiver(pre_save, sender=Petition)
 def sanitize_petition(sender, instance, *args, **kwargs):
-    instance.description = bleach.clean(instance.description)
+    instance.description = bleach.clean(
+        instance.description,
+        tags=allowed_tags,
+        attributes=allowed_attrs
+    )
     instance.title = bleach.clean(instance.title)

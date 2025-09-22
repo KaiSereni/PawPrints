@@ -1,9 +1,14 @@
-FROM python:3.6-alpine3.6
-ENV PYTHONUNBUFFERED 1
+FROM python:3.11-slim-bookworm
+ENV PYTHONUNBUFFERED=1
 
-RUN apk update 
-RUN apk add postgresql-libs gcc
-RUN apk add musl-dev postgresql-client postgresql-dev libxslt-dev libxml2-dev pkgconfig xmlsec-dev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql-client \
+    libpq-dev \
+    gcc \
+    libxml2-dev \
+    libxslt-dev \
+    libxmlsec1-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -U pip
 
@@ -15,3 +20,5 @@ ADD ./requirements.txt /PawPrints/requirements.txt
 RUN pip install -r requirements.txt
 
 ADD . /PawPrints
+
+RUN python manage.py renderfiles && python manage.py compress
